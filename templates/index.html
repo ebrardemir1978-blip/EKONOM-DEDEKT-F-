@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ekonomi Dedektifi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <!-- Auth View -->
+    <div id="auth-view" class="view active">
+        <div class="glass-panel auth-panel">
+            <h1 class="title">Ekonomi Dedektifi</h1>
+            <p class="subtitle">Verilerin dilini çöz, ekonomiyi tahmin et.</p>
+            
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-login" onclick="switchAuthTab('login')">Giriş Yap</button>
+                <button class="tab-btn" id="tab-register" onclick="switchAuthTab('register')">Kayıt Ol</button>
+            </div>
+
+            <form id="auth-form" onsubmit="handleAuth(event)">
+                <div class="input-group">
+                    <input type="text" id="username" placeholder="Kullanıcı Adı" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="password" placeholder="Şifre" required>
+                </div>
+                <button type="submit" id="auth-submit-btn" class="primary-btn">Giriş Yap</button>
+                <div id="auth-error" class="error-msg"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="dashboard-view" class="view">
+        <div class="glass-panel full-panel">
+            <header class="app-header">
+                <h2>Hoş geldin, <span id="dash-username"></span>!</h2>
+                <button class="secondary-btn" onclick="logout()">Çıkış Yap</button>
+            </header>
+            
+            <div class="stats-container">
+                <div class="stat-box">
+                    <h3>Puan</h3>
+                    <p id="dash-score" class="highlight-text">0</p>
+                </div>
+                <div class="stat-box">
+                    <h3>Seviye</h3>
+                    <p id="dash-level" class="highlight-text">Kolay</p>
+                </div>
+            </div>
+
+            <div class="action-container">
+                <button class="primary-btn pulse-anim" onclick="startGame()">Yeni Tahmin Yap</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game View -->
+    <div id="game-view" class="view">
+        <div class="glass-panel full-panel">
+            <header class="app-header">
+                <h2>Ekonomi Radarı</h2>
+                <button class="secondary-btn" onclick="showDashboard()">Gezinmeye Dön</button>
+            </header>
+            
+            <div class="game-content">
+                <p class="instruction">Aşağıdaki ekonomik verileri incele ve şu anki durumu tahmin et.</p>
+                
+                <div class="data-grid" id="data-grid">
+                    <!-- Data is injected here -->
+                </div>
+
+                <div class="prediction-section">
+                    <h3>Sence Bu Ekonominin Durumu Nedir?</h3>
+                    <div class="prediction-buttons">
+                        <button class="pred-btn btn-normal" onclick="submitPrediction('Normal')">Normal</button>
+                        <button class="pred-btn btn-recession" onclick="submitPrediction('Durgunluk')">Durgunluk (Resesyon)</button>
+                        <button class="pred-btn btn-crisis" onclick="submitPrediction('Kriz')">Kriz</button>
+                        <button class="pred-btn btn-hyperinflation" onclick="submitPrediction('Hiperenflasyon')">Hiperenflasyon</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="result-modal" class="modal">
+        <div class="glass-panel modal-content">
+            <h2 id="result-title"></h2>
+            <p id="result-message" class="large-text"></p>
+            <p id="result-explanation" class="explanation-text"></p>
+            <div class="modal-actions">
+                <button class="primary-btn" onclick="closeResultAndDashboard()">Devam Et</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
