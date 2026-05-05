@@ -238,10 +238,10 @@ def evaluate_case():
     
     if is_correct:
         user.score += 20
-        msg_title = "Doğru Bildiniz!"
+        msg_title = f"Doğru! Ekonomi bu durumda: {true_state}"
     else:
         user.score -= 5
-        msg_title = "Ne Yazık Ki Yanlış Yorumladınız."
+        msg_title = f"Yanlış! Ekonominin gerçek durumu: {true_state}"
         
     explanation = stage_data["explanation"]
     country_example = stage_data["country"]

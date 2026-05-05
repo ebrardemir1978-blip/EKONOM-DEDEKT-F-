@@ -163,15 +163,15 @@ function showResultModal(resultData) {
         title.style.color = "var(--danger)";
     }
 
-    msg.innerText = resultData.msg_title + ` (Bu ülke durumu: ${resultData.true_state})`;
+    msg.innerText = resultData.msg_title;
     country.innerText = resultData.country;
     
-    let bonusText = `\n\nYeni Puanın: ${userConfig.score} | Yeni Seviye: ${userConfig.level_name}`;
+    let bonusText = `\n\nPuan: ${userConfig.score} | Seviye: ${userConfig.level_name}`;
     if(resultData.level_up) {
         bonusText = `\n\n🎉 SEVİYE ATLADINIZ! 🎉\nYeni Puanın: ${userConfig.score} | Yeni Seviye: ${userConfig.level_name}`;
     }
     if(resultData.game_finished) {
-        bonusText = `\n\n🏆 OYUNU BİTİRDİNİZ! 🏆\nTüm görevleri tamamladınız.`;
+        bonusText = `\n\n🏆 OYUNU BİTİRDİNİZ! 🏆\nTüm görevleri tamamladınız. Puanın: ${userConfig.score}`;
     }
     
     exp.innerText = resultData.explanation + bonusText;
