@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session, render_template, redirect
+from flask import Flask, request, jsonify, session, render_template
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, GameSession
 
@@ -9,18 +9,133 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-with app.app_context():
-    db.create_all()
+# JSON format for Scenarios and Levels
+SCENARIOS = {
+    1: { # Kolay Seviye
+        "name": "Kolay",
+        "stages": [
+            {
+                "id": 1,
+                "data": {"inflation": 2.5, "unemployment": 4.5, "interest_rate": 5.0, "growth": 3.0, "exchange_rate": 15.0},
+                "true_state": "Normal",
+                "country": "Örnek Ülke: ABD / Avrupa'daki gelişmiş ülkelerin refah dönemi.",
+                "explanation": "Faiz oranları dengeli, büyüme istikrarlı ve işsizlik çok düşük. Enflasyon hedef seviyelerde (genelde %2-3). Bu sağlıklı bir ekonomidir."
+            },
+            {
+                "id": 2,
+                "data": {"inflation": 4.0, "unemployment": 9.5, "interest_rate": 1.0, "growth": -1.5, "exchange_rate": 16.0},
+                "true_state": "Durgunluk",
+                "country": "Örnek Ülke: Japonya'nın Kayıp On Yılları veya 2008 Küresel Krizi Sonrası Avrupa.",
+                "explanation": "Büyüme negatif ve işsizlik yüksek seyrediyor. Tüketim azaldığı için durgunluk (resesyon) yaşanıyor. Merkez Bankası teşvik için faizi %1'e indirmiş."
+            },
+            {
+                "id": 3,
+                "data": {"inflation": 130.0, "unemployment": 8.0, "interest_rate": 60.0, "growth": 1.5, "exchange_rate": 850.0},
+                "true_state": "Hiperenflasyon",
+                "country": "Örnek Ülke: Arjantin veya Zimbabve.",
+                "explanation": "Enflasyon kontrol edilemez bir hızla artıyor! Tüm fiyatlar günlük değişiyor. Ülkede devasa bir devalüasyon (yerel paranın değer kaybı) yaşanıyor, alınan maaş o ay bitmeden pul oluyor."
+            },
+            {
+                "id": 4,
+                "data": {"inflation": 18.0, "unemployment": 14.5, "interest_rate": 25.0, "growth": -4.0, "exchange_rate": 45.0},
+                "true_state": "Kriz",
+                "country": "Örnek Ülke: 2001 Türkiye Ekonomik Krizi.",
+                "explanation": "Büyüme %4 küçülmüş (Çok şiddetli). İşten çıkarmalar hat safhada (%14.5). Şok bir döviz fırlaması ve ani faiz yükselişleri şirketleri batırmış."
+            },
+            {
+                "id": 5,
+                "data": {"inflation": 5.0, "unemployment": 5.5, "interest_rate": 10.0, "growth": 7.0, "exchange_rate": 20.0},
+                "true_state": "Normal",
+                "country": "Örnek Ülke: Çin'in veya Türkiye'nin hızlı büyüme yılları.",
+                "explanation": "Normal ekonominin hızlı büyüyen bir evresi. %7 büyüme harika bir rakam, üretimin canlı olduğunu ve yatırımların karşılık bulduğunu gösteriyor."
+            }
+        ]
+    },
+    2: { # Orta Seviye
+        "name": "Orta",
+        "stages": [
+            {
+                "id": 1,
+                "data": {"inflation": 45.0, "unemployment": 10.0, "interest_rate": 15.0, "growth": 2.0, "exchange_rate": 25.0},
+                "true_state": "Kriz",
+                "country": "Örnek Ülke: Türkiye (Faiz Sebep-Enflasyon Sonuç Dönemi).",
+                "explanation": "Faizler enflasyona göre çok düşük (%15'e karşı %45 enflasyon). Bu durum döviz kurunun patlamasına sebep olur ve ithal malları inanılmaz pahalılaştırarak gizli bir krize iter."
+            },
+            {
+                "id": 2,
+                "data": {"inflation": 1.0, "unemployment": 3.0, "interest_rate": -0.5, "growth": 0.5, "exchange_rate": 110.0},
+                "true_state": "Durgunluk",
+                "country": "Örnek Ülke: Japonya.",
+                "explanation": "Durgunluğun farklı bir boyutu: Deflasyon tehlikesi. İnsanlar 'yarın nasılsa daha ucuzlayacak' diyerek para harcamıyor. Merkez Bankası faizi eksiye (-) düşürse bile tüketim artmıyor."
+            },
+            {
+                "id": 3,
+                "data": {"inflation": 12.0, "unemployment": 15.0, "interest_rate": 8.0, "growth": -2.5, "exchange_rate": 10.0},
+                "true_state": "Kriz",
+                "country": "Örnek Ülke: İspanya / Yunanistan Kiralık Borç Krizi Dönemi.",
+                "explanation": "Ülke feci şekilde daralıyor ve her 6 kişiden biri işsiz. İşsizlik ve büyüme verileri krizin varlığını gösteren en temel iki negatif makroekonomik indikatördür."
+            },
+            {
+                "id": 4,
+                "data": {"inflation": 3.0, "unemployment": 4.0, "interest_rate": 4.5, "growth": 2.5, "exchange_rate": 1.1},
+                "true_state": "Normal",
+                "country": "Örnek Ülke: Günümüz ABD Yönetimi Sonrası Dönem.",
+                "explanation": "Makroekonomik dengeler tam kapasiteye ulaşmış durumda. Tüketim ile üretim birbirini mükemmel destekliyor."
+            },
+            {
+                "id": 5,
+                "data": {"inflation": 25000.0, "unemployment": 25.0, "interest_rate": 90.0, "growth": -10.0, "exchange_rate": 4000.0},
+                "true_state": "Hiperenflasyon",
+                "country": "Örnek Ülke: 1920'ler Almanya (Weimar Cumhuriyeti) veya Venezuela.",
+                "explanation": "Çok ağır hiperenflasyon ve ekonomik çöküş. İnsanlar bir ekmek almak için çuvallarla para taşımak zorunda kalıyor. Üretim veya maaş kalmadı."
+            }
+        ]
+    },
+    3: { # Zor Seviye
+        "name": "Zor",
+        "stages": [
+            {
+                "id": 1,
+                "data": {"inflation": -2.0, "unemployment": 12.0, "interest_rate": 0.0, "growth": -5.0, "exchange_rate": 1.0},
+                "true_state": "Kriz",
+                "country": "Örnek Ülke: 1929 Büyük Buhranı.",
+                "explanation": "Soru şaşırtmacalı: Enflasyon yok (Deflasyon var). Ancak işsizlik devasa ve koca bir ülke eksi (-)5 küçülmüş! Büyük bir finansal krizdeyiz."
+            },
+            {
+                "id": 2,
+                "data": {"inflation": 25.0, "unemployment": 7.0, "interest_rate": 50.0, "growth": 1.0, "exchange_rate": 35.0},
+                "true_state": "Durgunluk",
+                "country": "Örnek Ülke: Brezilya veya Gelişmekte olan ülke Stagflasyonu.",
+                "explanation": "Stagflasyon! Enflasyon yüksek kalırken, yüksek faiz nedeniyle yatırım yapılmıyor ve büyüme bitme noktasına geliyor (+1%). Yeni iş olanakları da durdu."
+            },
+            {
+                "id": 3,
+                "data": {"inflation": 85.0, "unemployment": 11.0, "interest_rate": 30.0, "growth": 4.5, "exchange_rate": 28.0},
+                "true_state": "Normal",
+                "country": "Örnek Ülke: Yüksek Enflasyonlu Ama İşleyen Ülke. (Örn: Geçmişteki bazı Türkiye yıllari).",
+                "explanation": "Zor Soru! Enflasyon 85 yüksek olsa da hiper boyutunda değil; ve büyüme devam ediyor! Sistem zar zor dönüyor ama bir felaket/kriz veya durgunluk çöküşü henüz yok. Yani 'Yeni Normal'."
+            },
+            {
+                "id": 4,
+                "data": {"inflation": 500.0, "unemployment": 18.0, "interest_rate": 120.0, "growth": -8.0, "exchange_rate": 600.0},
+                "true_state": "Hiperenflasyon",
+                "country": "Örnek Ülke: Macaristan (II. Dünya Savaşı Sonrası) başlangıç aşaması.",
+                "explanation": "Enflasyon kontrolü kaybetti, para değersiz ve üretim felç. Hiperenflasyon döngüsünün tam göbeği."
+            },
+            {
+                "id": 5,
+                "data": {"inflation": 6.5, "unemployment": 6.5, "interest_rate": 5.5, "growth": 5.0, "exchange_rate": 1.5},
+                "true_state": "Normal",
+                "country": "Örnek Ülke: Bir İngiltere / Kanada Sıçrama Dönemi.",
+                "explanation": "Hafif enflasyonist ortam üreticinin işine gelip büyütmeyi desteklemiş. Mükemmel bir altın oran seviyesi."
+            }
+        ]
+    }
+}
 
-def evaluate_economy(inflation, unemployment, interest, growth, exchange):
-    if inflation >= 40:
-        return "Hiperenflasyon", "Enflasyon oranları kontrolsüz yükseldiği için hiperenflasyon yaşanıyor."
-    elif growth < 0 and unemployment >= 10:
-        return "Kriz", "Büyüme negatif ve işsizlik çok yüksek, ekonomi tam bir krizde."
-    elif growth <= 1 and unemployment >= 8:
-        return "Durgunluk", "Ekonomik büyüme çok zayıf ve işsizlik yüksek. Durgunluk (Resesyon) yaşanıyor."
-    else:
-        return "Normal", "Veriler şu an için ekonomik felaket senaryolarını göstermiyor, normal işleyiş sürüyor."
+with app.app_context():
+    # Will drop and recreate tables properly from terminal outside context.
+    pass
 
 @app.route('/')
 def index():
@@ -40,7 +155,7 @@ def register():
     db.session.commit()
     
     session['user_id'] = user.id
-    return jsonify({"success": True, "message": "Kayıt başarılı", "user": {"username": user.username, "score": user.score, "level": user.level}})
+    return jsonify({"success": True, "user": get_user_data(user)})
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -51,7 +166,7 @@ def login():
     user = User.query.filter_by(username=username).first()
     if user and check_password_hash(user.password_hash, password):
         session['user_id'] = user.id
-        return jsonify({"success": True, "user": {"username": user.username, "score": user.score, "level": user.level}})
+        return jsonify({"success": True, "user": get_user_data(user)})
     
     return jsonify({"error": "Geçersiz kullanıcı adı veya şifre"}), 401
 
@@ -66,63 +181,109 @@ def get_me():
     if not user_id:
         return jsonify({"error": "Unauthorized"}), 401
     user = User.query.get(user_id)
-    return jsonify({"username": user.username, "score": user.score, "level": user.level})
+    return jsonify(get_user_data(user))
+
+def get_user_data(user):
+    level_name = SCENARIOS.get(user.level_id, SCENARIOS[user.level_id])['name'] if user.level_id in SCENARIOS else "Oyun Bitti"
+    return {
+        "username": user.username, 
+        "score": user.score, 
+        "level_name": level_name,
+        "level_id": user.level_id,
+        "stage_id": user.stage_id
+    }
+
+@app.route('/api/game/case', methods=['GET'])
+def get_case():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    user = User.query.get(session['user_id'])
+    
+    if user.level_id > 3:
+        return jsonify({"game_over": True, "message": "Tüm bölümleri tamamladınız! Harika bir Ekonomi Dedektifi oldunuz."})
+        
+    level_data = SCENARIOS[user.level_id]
+    # find stage
+    stage_data = next((s for s in level_data["stages"] if s["id"] == user.stage_id), None)
+    
+    if not stage_data:
+        return jsonify({"error": "Bölüm verisi bulunamadı."}), 404
+        
+    return jsonify({
+        "level_name": level_data["name"],
+        "stage_id": user.stage_id,
+        "data": stage_data["data"]
+    })
 
 @app.route('/api/game/evaluate', methods=['POST'])
-def play_game():
+def evaluate_case():
     if 'user_id' not in session:
-        return jsonify({"error": "Lütfen önce giriş yapın"}), 401
+        return jsonify({"error": "Unauthorized"}), 401
         
-    data = request.json
-    user_id = session['user_id']
-    user = User.query.get(user_id)
+    user = User.query.get(session['user_id'])
+    if user.level_id > 3:
+        return jsonify({"error": "Oyun bitti."}), 400
+        
+    prediction = request.json.get('prediction')
     
-    prediction = data.get('prediction')
-    inflation = float(data.get('inflation', 0))
-    unemployment = float(data.get('unemployment', 0))
-    interest = float(data.get('interest_rate', 0))
-    growth = float(data.get('growth', 0))
-    exchange = float(data.get('exchange_rate', 0))
+    level_data = SCENARIOS[user.level_id]
+    stage_data = next((s for s in level_data["stages"] if s["id"] == user.stage_id), None)
     
-    true_state, explanation = evaluate_economy(inflation, unemployment, interest, growth, exchange)
+    if not stage_data:
+        return jsonify({"error": "Senaryo bulunamadı"}), 400
+        
+    true_state = stage_data["true_state"]
     is_correct = (prediction == true_state)
     
     if is_correct:
-        user.score += 10
-        msg = f"Doğru! Ekonomi bu durumda: {true_state}"
+        user.score += 20
+        msg_title = "Doğru Bildiniz!"
     else:
         user.score -= 5
-        msg = f"Yanlış! Ekonominin gerçek durumu: {true_state}"
+        msg_title = "Ne Yazık Ki Yanlış Yorumladınız."
         
-    # Level update simple logic
-    if user.score >= 50:
-        user.level = 'Orta'
-    if user.score >= 100:
-        user.level = 'Zor'
-        
+    explanation = stage_data["explanation"]
+    country_example = stage_data["country"]
+    
+    # Save log
     game_session = GameSession(
         user_id=user.id,
-        inflation=inflation,
-        unemployment=unemployment,
-        interest_rate=interest,
-        growth=growth,
-        exchange_rate=exchange,
+        level_id=user.level_id,
+        stage_id=user.stage_id,
         prediction=prediction,
-        true_state=true_state,
         is_correct=is_correct
     )
-    
     db.session.add(game_session)
+    
+    # Check progression
+    level_up = False
+    game_finished = False
+    
+    if is_correct:
+        user.stage_id += 1
+        if user.stage_id > 5:
+            user.stage_id = 1
+            user.level_id += 1
+            level_up = True
+            
+        if user.level_id > 3:
+            game_finished = True
+    
     db.session.commit()
+    
+    new_user_data = get_user_data(user)
     
     return jsonify({
         "success": True,
         "is_correct": is_correct,
-        "message": msg,
+        "msg_title": msg_title,
         "explanation": explanation,
-        "new_score": user.score,
-        "new_level": user.level,
-        "true_state": true_state
+        "country": country_example,
+        "true_state": true_state,
+        "level_up": level_up,
+        "game_finished": game_finished,
+        "user_data": new_user_data
     })
 
 if __name__ == '__main__':

@@ -67,7 +67,10 @@
     <div id="game-view" class="view">
         <div class="glass-panel full-panel">
             <header class="app-header">
-                <h2>Ekonomi Radarı</h2>
+                <div>
+                    <h2 id="level-display">Seviye: Kolay</h2>
+                    <h3 id="stage-display" style="color: var(--text-muted); font-size: 1.1rem;">Bölüm: 1/5</h3>
+                </div>
                 <button class="secondary-btn" onclick="showDashboard()">Gezinmeye Dön</button>
             </header>
             
@@ -96,9 +99,10 @@
         <div class="glass-panel modal-content">
             <h2 id="result-title"></h2>
             <p id="result-message" class="large-text"></p>
+            <p id="result-country" style="color: var(--warning); margin-bottom: 10px; font-weight: bold;"></p>
             <p id="result-explanation" class="explanation-text"></p>
             <div class="modal-actions">
-                <button class="primary-btn" onclick="closeResultAndDashboard()">Devam Et</button>
+                <button class="primary-btn" onclick="closeResultAndCheckProgress()">Devam Et</button>
             </div>
         </div>
     </div>
