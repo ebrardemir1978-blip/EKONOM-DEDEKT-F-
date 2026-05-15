@@ -2,6 +2,7 @@
 let currentMode = 'login'; // login or register
 let userConfig = null;
 let currentGameData = null;
+let resultChartInstance = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAuthStatus();
@@ -73,6 +74,37 @@ function updateDashboard() {
     document.getElementById('dash-username').innerText = userConfig.username;
     document.getElementById('dash-score').innerText = userConfig.score;
     document.getElementById('dash-level').innerText = userConfig.level_name + (" ("+userConfig.stage_id+"/5)");
+    fetchLeaderboard();
+}
+
+async function fetchLeaderboard() {
+    try {
+        const res = await fetch('/api/leaderboard');
+        if (res.ok) {
+            const data = await res.json();
+            const tbody = document.getElementById('leaderboard-body');
+            tbody.innerHTML = '';
+            data.leaderboard.forEach((user, index) => {
+                const rank = index + 1;
+                let rankClass = '';
+                let rankDisplay = rank;
+                if (rank === 1) { rankClass = 'rank-1'; rankDisplay = '🥇 1'; }
+                else if (rank === 2) { rankClass = 'rank-2'; rankDisplay = '🥈 2'; }
+                else if (rank === 3) { rankClass = 'rank-3'; rankDisplay = '🥉 3'; }
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="${rankClass}">${rankDisplay}</td>
+                        <td style="${user.username === userConfig.username ? 'color: var(--primary); font-weight: bold;' : ''}">${user.username}</td>
+                        <td>${user.level_name} (${user.stage_id}/5)</td>
+                        <td style="color: var(--secondary); font-weight: bold;">${user.score}</td>
+                    </tr>
+                `;
+            });
+        }
+    } catch(e) {
+        console.error("Leaderboard yüklenemedi", e);
+    }
 }
 
 function switchView(viewId) {
@@ -175,6 +207,64 @@ function showResultModal(resultData) {
     }
     
     exp.innerText = resultData.explanation + bonusText;
+
+    if (resultChartInstance) {
+        resultChartInstance.destroy();
+    }
+    const ctx = document.getElementById('resultChart').getContext('2d');
+    
+    const isGrowthPositive = currentGameData.growth >= 0;
+    
+    resultChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Enflasyon', 'İşsizlik', 'Faiz Oranı', 'Büyüme', 'Döviz Kuru'],
+            datasets: [{
+                label: 'Ekonomik Veriler (%)',
+                data: [
+                    currentGameData.inflation,
+                    currentGameData.unemployment,
+                    currentGameData.interest_rate,
+                    currentGameData.growth,
+                    currentGameData.exchange_rate
+                ],
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.7)',  // Kırmızı (Enflasyon)
+                    'rgba(245, 158, 11, 0.7)', // Turuncu (İşsizlik)
+                    'rgba(59, 130, 246, 0.7)', // Mavi (Faiz)
+                    isGrowthPositive ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)', // Büyüme (Yeşil/Kırmızı)
+                    'rgba(139, 92, 246, 0.7)'  // Mor (Döviz)
+                ],
+                borderColor: [
+                    'rgba(239, 68, 68, 1)',
+                    'rgba(245, 158, 11, 1)',
+                    'rgba(59, 130, 246, 1)',
+                    isGrowthPositive ? 'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)',
+                    'rgba(139, 92, 246, 1)'
+                ],
+                borderWidth: 1,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: { color: 'white', font: { family: 'Outfit' } }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: { color: 'white', font: { family: 'Outfit' } },
+                    grid: { color: 'rgba(255,255,255,0.1)' }
+                },
+                x: {
+                    ticks: { color: 'white', font: { family: 'Outfit' } },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
 
     modal.classList.add('active');
 }

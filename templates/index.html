@@ -6,6 +6,7 @@
     <title>Ekonomi Dedektifi</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="background-shapes">
@@ -40,7 +41,7 @@
 
     <!-- Dashboard View -->
     <div id="dashboard-view" class="view">
-        <div class="glass-panel full-panel">
+        <div class="glass-panel full-panel" style="overflow-y: auto;">
             <header class="app-header">
                 <h2>Hoş geldin, <span id="dash-username"></span>!</h2>
                 <button class="secondary-btn" onclick="logout()">Çıkış Yap</button>
@@ -57,7 +58,26 @@
                 </div>
             </div>
 
-            <div class="action-container">
+            <div class="leaderboard-container">
+                <h3>🏆 Liderlik Tablosu</h3>
+                <div class="leaderboard-table-wrapper">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Sıra</th>
+                                <th>Dedektif</th>
+                                <th>Seviye / Bölüm</th>
+                                <th>Puan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <!-- Leaderboard data will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="action-container" style="margin-top: 20px;">
                 <button class="primary-btn pulse-anim" onclick="startGame()">Yeni Tahmin Yap</button>
             </div>
         </div>
@@ -96,11 +116,20 @@
 
     <!-- Result Modal -->
     <div id="result-modal" class="modal">
-        <div class="glass-panel modal-content">
+        <div class="glass-panel modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
             <h2 id="result-title"></h2>
             <p id="result-message" class="large-text"></p>
-            <p id="result-country" style="color: var(--warning); margin-bottom: 10px; font-weight: bold;"></p>
-            <p id="result-explanation" class="explanation-text"></p>
+            <p id="result-country" style="color: var(--warning); margin-bottom: 15px; font-weight: bold;"></p>
+            
+            <div class="chart-container">
+                <canvas id="resultChart"></canvas>
+            </div>
+
+            <div class="analysis-container">
+                <h3 class="analysis-title">📊 Ekonomik Analiz</h3>
+                <p id="result-explanation" class="explanation-text"></p>
+            </div>
+
             <div class="modal-actions">
                 <button class="primary-btn" onclick="closeResultAndCheckProgress()">Devam Et</button>
             </div>

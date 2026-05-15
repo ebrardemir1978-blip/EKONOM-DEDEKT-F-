@@ -4,7 +4,7 @@ from models import db, User, GameSession
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ekonomi_dedektifi_secret_key_123'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ekonomi.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ekonomi_v2.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -285,6 +285,20 @@ def evaluate_case():
         "game_finished": game_finished,
         "user_data": new_user_data
     })
+
+@app.route('/api/leaderboard', methods=['GET'])
+def get_leaderboard():
+    users = User.query.order_by(User.score.desc()).limit(10).all()
+    leaderboard_data = []
+    for u in users:
+        level_name = SCENARIOS.get(u.level_id, SCENARIOS.get(3))['name'] if u.level_id in SCENARIOS else "Oyun Bitti"
+        leaderboard_data.append({
+            "username": u.username,
+            "score": u.score,
+            "level_name": level_name,
+            "stage_id": u.stage_id
+        })
+    return jsonify({"success": True, "leaderboard": leaderboard_data})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
