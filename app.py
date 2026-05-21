@@ -134,8 +134,7 @@ SCENARIOS = {
 }
 
 with app.app_context():
-    # Will drop and recreate tables properly from terminal outside context.
-    pass
+    db.create_all()
 
 @app.route('/')
 def index():
@@ -181,10 +180,13 @@ def get_me():
     if not user_id:
         return jsonify({"error": "Unauthorized"}), 401
     user = User.query.get(user_id)
+    if not user:
+        session.pop('user_id', None)
+        return jsonify({"error": "Unauthorized"}), 401
     return jsonify(get_user_data(user))
 
 def get_user_data(user):
-    level_name = SCENARIOS.get(user.level_id, SCENARIOS[user.level_id])['name'] if user.level_id in SCENARIOS else "Oyun Bitti"
+    level_name = SCENARIOS[user.level_id]['name'] if user.level_id in SCENARIOS else "Oyun Bitti"
     return {
         "username": user.username, 
         "score": user.score, 
@@ -199,6 +201,9 @@ def get_case():
         return jsonify({"error": "Unauthorized"}), 401
         
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return jsonify({"error": "Unauthorized"}), 401
     
     if user.level_id > 3:
         return jsonify({"game_over": True, "message": "Tüm bölümleri tamamladınız! Harika bir Ekonomi Dedektifi oldunuz."})
@@ -222,6 +227,9 @@ def evaluate_case():
         return jsonify({"error": "Unauthorized"}), 401
         
     user = User.query.get(session['user_id'])
+    if not user:
+        session.pop('user_id', None)
+        return jsonify({"error": "Unauthorized"}), 401
     if user.level_id > 3:
         return jsonify({"error": "Oyun bitti."}), 400
         
