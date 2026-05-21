@@ -299,7 +299,7 @@ def get_leaderboard():
     users = User.query.order_by(User.score.desc()).limit(10).all()
     leaderboard_data = []
     for u in users:
-        level_name = SCENARIOS.get(u.level_id, SCENARIOS.get(3))['name'] if u.level_id in SCENARIOS else "Oyun Bitti"
+        level_name = SCENARIOS[u.level_id]['name'] if u.level_id in SCENARIOS else "Oyun Bitti"
         leaderboard_data.append({
             "username": u.username,
             "score": u.score,

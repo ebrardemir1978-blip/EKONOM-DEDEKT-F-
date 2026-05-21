@@ -73,7 +73,15 @@ function updateDashboard() {
     if (!userConfig) return;
     document.getElementById('dash-username').innerText = userConfig.username;
     document.getElementById('dash-score').innerText = userConfig.score;
-    document.getElementById('dash-level').innerText = userConfig.level_name + (" ("+userConfig.stage_id+"/5)");
+    
+    const levelDisplay = document.getElementById('dash-level');
+    if (userConfig.level_id > 3) {
+        levelDisplay.innerText = "🏆 Oyun Tamamlandı";
+        levelDisplay.style.color = "var(--warning)";
+    } else {
+        levelDisplay.innerText = userConfig.level_name + (" ("+userConfig.stage_id+"/5)");
+        levelDisplay.style.color = "var(--secondary)";
+    }
     fetchLeaderboard();
 }
 
