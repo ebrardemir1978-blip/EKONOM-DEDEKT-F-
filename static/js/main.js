@@ -3,6 +3,10 @@ let currentMode = 'login'; // login or register
 let userConfig = null;
 let currentGameData = null;
 let resultChartInstance = null;
+let gameTimerInterval = null;
+let gameTimeLeft = 15 * 60; // 15 minutes in seconds
+let lastActionTime = 0; // tracking time per question
+let hapBilgiUsed = false; // track if user opened help this question
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAuthStatus();
@@ -106,12 +110,13 @@ async function fetchLeaderboard() {
                         <td style="${user.username === userConfig.username ? 'color: var(--primary); font-weight: bold;' : ''}">${user.username}</td>
                         <td>${user.level_name} (${user.stage_id}/5)</td>
                         <td style="color: var(--secondary); font-weight: bold;">${user.score}</td>
+                        <td>${formatTime(user.total_time_spent)}</td>
                     </tr>
                 `;
             });
         }
     } catch(e) {
-        console.error("Leaderboard yüklenemedi", e);
+        // Error silented for cleaner production experience
     }
 }
 
@@ -125,6 +130,23 @@ function switchView(viewId) {
 function showDashboard() {
     updateDashboard(); // refresh scores
     switchView('dashboard-view');
+}
+
+function formatTime(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+}
+
+function toggleHelpBox() {
+    const box = document.getElementById('help-box');
+    const isHidden = box.style.display === 'none' || box.style.display === '';
+    box.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+        hapBilgiUsed = true; // user opened it — penalty applies
+        const btn = document.getElementById('toggle-help-btn');
+        if (btn) btn.style.color = '#f59e0b'; // warn with orange
+    }
 }
 
 async function startGame() {
@@ -154,6 +176,15 @@ async function startGame() {
             `;
         
             switchView('game-view');
+            updateHelpBox();
+            startTimer();
+            lastActionTime = Date.now();
+            // Reset help state for new question
+            hapBilgiUsed = false;
+            const helpBox = document.getElementById('help-box');
+            if (helpBox) helpBox.style.display = 'none';
+            const helpBtn = document.getElementById('toggle-help-btn');
+            if (helpBtn) helpBtn.style.color = '';
         } else {
             alert(data.error || "Erişim reddedildi.");
         }
@@ -162,14 +193,92 @@ async function startGame() {
     }
 }
 
+function startTimer() {
+    if (gameTimerInterval) return;
+    
+    document.getElementById('game-timer-container').style.display = 'flex';
+    
+    gameTimerInterval = setInterval(() => {
+        gameTimeLeft--;
+        updateTimerDisplay();
+        
+        if (gameTimeLeft <= 0) {
+            clearInterval(gameTimerInterval);
+            gameTimerInterval = null;
+            alert("⏰ Süreniz doldu! Oyun sona erdi.");
+            logout();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const timerEl = document.getElementById('game-timer');
+    if (!timerEl) return;
+    
+    const min = Math.floor(gameTimeLeft / 60);
+    const sec = gameTimeLeft % 60;
+    timerEl.innerText = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+    
+    if (gameTimeLeft < 60) {
+        timerEl.classList.add('timer-urgent');
+    } else {
+        timerEl.classList.remove('timer-urgent');
+    }
+}
+
+function updateHelpBox() {
+    if (!currentGameData) return;
+    
+    const content = document.getElementById('help-content');
+    if (!content) return;
+    
+    const { inflation, unemployment, growth, exchange_rate, interest_rate } = currentGameData;
+    
+    // Build a list of neutral, educational observations about the data
+    const clues = [];
+    
+    if (inflation > 50)
+        clues.push(`💡 Enflasyon <b>%${inflation}</b> ile olağanüstü yüksek. Tarihsel olarak bu seviyelerde para birimlerinin günlük alım gücü hızla eriyebiliyor.`);
+    else if (inflation > 15)
+        clues.push(`💡 Enflasyon <b>%${inflation}</b> — merkez bankasının hedef bandının oldukça üstünde. Faiz politikası bu durumu nasıl etkiliyor, incele.`);
+    else if (inflation < 1)
+        clues.push(`💡 Enflasyon neredeyse sıfır ya da negatif. Bu durum tüketicilerin harcama yapmayı ertelediğine işaret edebilir.`);
+
+    if (unemployment > 15)
+        clues.push(`💡 İşsizlik oranı <b>%${unemployment}</b> — iş piyasası çok baskı altında. İstihdam olmadan ekonomik aktivite daralır.`);
+    else if (unemployment > 8)
+        clues.push(`💡 İşsizlik <b>%${unemployment}</b> ile yüksek seyrediyor; ancak ekonomi her zaman bu eşiği bir kriz sayılır mı?`);
+
+    if (growth < -2)
+        clues.push(`💡 Büyüme <b>%${growth}</b> ile negatif — ekonomi küçülüyor. Art arda iki çeyrek böyle giderse teknik olarak resesyon tanımlanır.`);
+    else if (growth > 5)
+        clues.push(`💡 Büyüme <b>%${growth}</b> — ülke ekonomisi hızlı genişliyor. Yatırım ve tüketim tarafını kontrol et.`);
+
+    if (interest_rate < inflation && inflation > 10)
+        clues.push(`💡 Faiz (<b>%${interest_rate}</b>) enflasyonun (<b>%${inflation}</b>) çok altında: "reel faiz" negatif. Bu durum paranın değerini eriten bir sarmalı besleyebilir.`);
+
+    const tip = clues.length > 0
+        ? clues.join('<br><br>')
+        : `💡 Verilerin hepsi birden yorum yapmayı gerektiriyor. Büyüme, işsizlik ve enflasyon üçlüsüne birlikte bak — biri tek başına hikayeyi anlatmaz.`;
+    
+    content.innerHTML = tip;
+}
+
 async function submitPrediction(prediction) {
     if (!currentGameData) return;
+
+    const timeSpent = Math.floor((Date.now() - lastActionTime) / 1000);
+    lastActionTime = Date.now(); // Update for next question
 
     try {
         const res = await fetch('/api/game/evaluate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prediction: prediction }) // no need to send other data as backend tracks user state
+            body: JSON.stringify({ 
+                prediction: prediction,
+                time_spent: timeSpent,
+                hap_bilgi_used: hapBilgiUsed
+            })
         });
         
         if (res.ok) {
@@ -279,7 +388,11 @@ function showResultModal(resultData) {
 
 function closeResultAndCheckProgress() {
     document.getElementById('result-modal').classList.remove('active');
-    // After continuing, if game finished show dashboard else show next level? 
-    // Simply return to dashboard is cleaner, they can click "Yeni Tahmin Yap"
-    showDashboard();
+    
+    // If game is not finished, go to next case directly
+    if (userConfig && userConfig.level_id <= 3) {
+        startGame();
+    } else {
+        showDashboard();
+    }
 }

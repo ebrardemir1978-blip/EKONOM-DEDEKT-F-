@@ -10,6 +10,7 @@ class User(db.Model):
     score = db.Column(db.Integer, default=0)
     level_id = db.Column(db.Integer, default=1) # 1: Kolay, 2: Orta, 3: Zor vs.
     stage_id = db.Column(db.Integer, default=1) # 1 to 5 per level
+    total_time_spent = db.Column(db.Integer, default=0) # in seconds
     sessions = db.relationship('GameSession', backref='user', lazy=True)
 
 class GameSession(db.Model):

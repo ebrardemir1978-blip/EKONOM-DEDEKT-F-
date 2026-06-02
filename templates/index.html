@@ -68,6 +68,7 @@
                                 <th>Dedektif</th>
                                 <th>Seviye / Bölüm</th>
                                 <th>Puan</th>
+                                <th>Süre (DA:SN)</th>
                             </tr>
                         </thead>
                         <tbody id="leaderboard-body">
@@ -91,6 +92,10 @@
                     <h2 id="level-display">Seviye: Kolay</h2>
                     <h3 id="stage-display" style="color: var(--text-muted); font-size: 1.1rem;">Bölüm: 1/5</h3>
                 </div>
+                <div class="timer-container" id="game-timer-container" style="display: none;">
+                    <span class="timer-label">Kalan Süre:</span>
+                    <span id="game-timer" class="timer-value">15:00</span>
+                </div>
                 <button class="secondary-btn" onclick="showDashboard()">Gezinmeye Dön</button>
             </header>
             
@@ -109,6 +114,19 @@
                         <button class="pred-btn btn-crisis" onclick="submitPrediction('Kriz')">Kriz</button>
                         <button class="pred-btn btn-hyperinflation" onclick="submitPrediction('Hiperenflasyon')">Hiperenflasyon</button>
                     </div>
+                </div>
+
+                <!-- Help Box -->
+                <div class="help-box" id="help-box" style="display: none;">
+                    <div class="help-header">
+                        <span>💊 Hap Bilgi</span>
+                    </div>
+                    <div class="help-content" id="help-content">
+                        Verileri inceleyerek doğru tahmini yapmaya çalış. Bol şans!
+                    </div>
+                </div>
+                <div style="margin-top: 10px; text-align: left;">
+                    <button class="secondary-btn" id="toggle-help-btn" onclick="toggleHelpBox()" style="font-size: 0.85rem; padding: 5px 12px;">Hap Bilgi'yi Göster / Gizle</button>
                 </div>
             </div>
         </div>

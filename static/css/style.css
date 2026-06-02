@@ -91,12 +91,13 @@ body {
 }
 
 .full-panel {
-    width: 90vw;
-    max-width: 800px;
-    height: 85vh;
+    width: 95vw;
+    max-width: 850px;
+    height: 90vh;
     display: flex;
     flex-direction: column;
     z-index: 10;
+    padding: 30px 20px;
 }
 
 /* Views structure */
@@ -122,6 +123,7 @@ body {
     font-weight: 800;
     background: linear-gradient(135deg, #fff, #a5b4fc);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 10px;
 }
@@ -446,4 +448,73 @@ body {
 .analysis-container .explanation-text {
     margin-bottom: 0;
     font-size: 1rem;
+}
+/* Timer & Help Box */
+.timer-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.3);
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+}
+
+.timer-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.timer-value {
+    font-size: 1.2rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--warning);
+}
+
+.timer-urgent {
+    color: var(--danger);
+    animation: flash 1s infinite alternate;
+}
+
+@keyframes flash {
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+}
+
+.help-box {
+    margin-top: 20px;
+    background: rgba(79, 70, 229, 0.1);
+    border: 1px dashed var(--primary);
+    border-radius: 12px;
+    padding: 15px;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+}
+
+.help-box .help-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.help-box .help-content {
+    font-size: 0.9rem;
+    color: var(--text-main);
+    line-height: 1.4;
+}
+
+.help-box::before {
+    content: "💡";
+    position: absolute;
+    right: -10px;
+    bottom: -10px;
+    font-size: 3rem;
+    opacity: 0.1;
+    pointer-events: none;
 }

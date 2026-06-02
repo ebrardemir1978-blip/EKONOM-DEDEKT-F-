@@ -2,12 +2,44 @@ from flask import Flask, request, jsonify, session, render_template
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, GameSession
 
+import os
+import sqlite3
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'ekonomi_dedektifi_secret_key_123')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///ekonomi_v2.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'ekonomi_dedektifi_secret_key_123'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ekonomi_v2.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config.from_object(Config)
 
 db.init_app(app)
+
+def init_db():
+    with app.app_context():
+        db.create_all()
+        # Auto-migration: add total_time_spent column if it doesn't exist
+        try:
+            # Get the path from SQLALCHEMY_DATABASE_URI
+            db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+            if db_uri.startswith('sqlite:///'):
+                db_name = db_uri.split(':///')[1]
+                # If path is relative like 'ekonomi_v2.db', Check instance folder or current folder
+                # Flask-SQLAlchemy puts it in 'instance' by default if not absolute
+                db_path = os.path.join(app.instance_path, db_name)
+                
+                if os.path.exists(db_path):
+                    conn = sqlite3.connect(db_path)
+                    cursor = conn.cursor()
+                    cols = [row[1] for row in cursor.execute("PRAGMA table_info(user)").fetchall()]
+                    if 'total_time_spent' not in cols:
+                        cursor.execute("ALTER TABLE user ADD COLUMN total_time_spent INTEGER DEFAULT 0")
+                        conn.commit()
+                    conn.close()
+        except Exception as e:
+            app.logger.warning(f"Database migration warning: {e}")
+
+init_db()
 
 # JSON format for Scenarios and Levels
 SCENARIOS = {
@@ -135,6 +167,19 @@ SCENARIOS = {
 
 with app.app_context():
     db.create_all()
+    # Auto-migration: add total_time_spent column if it doesn't exist
+    try:
+        import sqlite3, os
+        db_path = os.path.join(os.path.dirname(__file__), 'instance', 'ekonomi_v2.db')
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cols = [row[1] for row in cursor.execute("PRAGMA table_info(user)").fetchall()]
+        if 'total_time_spent' not in cols:
+            cursor.execute("ALTER TABLE user ADD COLUMN total_time_spent INTEGER DEFAULT 0")
+            conn.commit()
+        conn.close()
+    except Exception:
+        pass  # DB may not exist yet; db.create_all() will handle it
 
 @app.route('/')
 def index():
@@ -192,7 +237,8 @@ def get_user_data(user):
         "score": user.score, 
         "level_name": level_name,
         "level_id": user.level_id,
-        "stage_id": user.stage_id
+        "stage_id": user.stage_id,
+        "total_time_spent": user.total_time_spent
     }
 
 @app.route('/api/game/case', methods=['GET'])
@@ -234,6 +280,11 @@ def evaluate_case():
         return jsonify({"error": "Oyun bitti."}), 400
         
     prediction = request.json.get('prediction')
+    time_spent_inc = request.json.get('time_spent', 0)
+    hap_bilgi_used = request.json.get('hap_bilgi_used', False)
+    
+    # Update total time
+    user.total_time_spent += time_spent_inc
     
     level_data = SCENARIOS[user.level_id]
     stage_data = next((s for s in level_data["stages"] if s["id"] == user.stage_id), None)
@@ -250,6 +301,12 @@ def evaluate_case():
     else:
         user.score -= 5
         msg_title = f"Yanlış! Ekonominin gerçek durumu: {true_state}"
+    
+    # Hap Bilgi cezası: -5 puan (cevap doğru da olsa yanlış da olsa)
+    hap_bilgi_penalty = 0
+    if hap_bilgi_used:
+        user.score -= 5
+        hap_bilgi_penalty = -5
         
     explanation = stage_data["explanation"]
     country_example = stage_data["country"]
@@ -304,9 +361,10 @@ def get_leaderboard():
             "username": u.username,
             "score": u.score,
             "level_name": level_name,
-            "stage_id": u.stage_id
+            "stage_id": u.stage_id,
+            "total_time_spent": u.total_time_spent
         })
     return jsonify({"success": True, "leaderboard": leaderboard_data})
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5050)
